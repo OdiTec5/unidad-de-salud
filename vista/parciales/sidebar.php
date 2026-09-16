@@ -9,6 +9,8 @@ $rutaActual = $_GET['ruta'] ?? 'dashboard';
 
         <p class="grupo-menu">Administración</p>
         <a href="index.php?ruta=turnos" class="<?= $rutaActual === 'turnos' ? 'activo' : '' ?>">Turnos</a>
+        <?php if (!empty($_SESSION['usuario_es_administrador'])): ?>
         <a href="index.php?ruta=configuraciones" class="<?= in_array($rutaActual, ['configuraciones', 'usuarios', 'categorias-turnero', 'beneficiarios', 'ventanillas'], true) ? 'activo' : '' ?>">Configuraciones</a>
+        <?php endif; ?>
     </nav>
 </aside>
