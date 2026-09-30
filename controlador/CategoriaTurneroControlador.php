@@ -94,12 +94,34 @@ class CategoriaTurneroControlador
         return preg_match('/^#[0-9a-fA-F]{6}$/', $color) === 1 ? $color : null;
     }
 
+    /**
+     * Lee hora_inicio/hora_fin/dias[] del POST. Si falta cualquiera de las dos horas, se
+     * descartan ambas (sin restricción de horario); los días se guardan como CSV o null si no
+     * se marcó ninguno (sin restricción de días).
+     */
+    private function leerHorarioPost(): array
+    {
+        $horaInicio = trim($_POST['hora_inicio'] ?? '');
+        $horaFin = trim($_POST['hora_fin'] ?? '');
+        $dias = array_filter(array_map('intval', $_POST['dias'] ?? []), static fn (int $d): bool => $d >= 1 && $d <= 7);
+
+        if ($horaInicio === '' || $horaFin === '' || $horaInicio >= $horaFin) {
+            $horaInicio = null;
+            $horaFin = null;
+        }
+
+        $diasSemana = !empty($dias) ? implode(',', array_unique($dias)) : null;
+
+        return [$horaInicio ?: null, $horaFin ?: null, $diasSemana];
+    }
+
     private function guardar(): array
     {
         $nombre = trim($_POST['nombre'] ?? '');
         $prefijo = mb_strtoupper(trim($_POST['prefijo'] ?? ''));
         $color = $this->validarColor(trim($_POST['color'] ?? '')) ?? '#0071e3';
         $ventanillaId = (int) ($_POST['ventanilla_id'] ?? 0);
+        [$horaInicio, $horaFin, $diasSemana] = $this->leerHorarioPost();
 
         if ($nombre === '' || $prefijo === '') {
             return ['El nombre y el prefijo son obligatorios.', ''];
@@ -117,7 +139,7 @@ class CategoriaTurneroControlador
             return ['Ya existe una categoría con ese prefijo.', ''];
         }
 
-        $this->modeloCategoria->crear($nombre, $prefijo, $color, $ventanillaId > 0 ? $ventanillaId : null);
+        $this->modeloCategoria->crear($nombre, $prefijo, $color, $ventanillaId > 0 ? $ventanillaId : null, $horaInicio, $horaFin, $diasSemana);
 
         return ['', 'Categoría agregada correctamente.'];
     }
@@ -129,6 +151,7 @@ class CategoriaTurneroControlador
         $prefijo = mb_strtoupper(trim($_POST['prefijo'] ?? ''));
         $color = $this->validarColor(trim($_POST['color'] ?? '')) ?? '#0071e3';
         $ventanillaId = (int) ($_POST['ventanilla_id'] ?? 0);
+        [$horaInicio, $horaFin, $diasSemana] = $this->leerHorarioPost();
 
         if ($id <= 0 || $this->modeloCategoria->obtenerPorId($id) === null) {
             return ['La categoría que intentas editar no existe.', ''];
@@ -150,7 +173,7 @@ class CategoriaTurneroControlador
             return ['Ya existe una categoría con ese prefijo.', ''];
         }
 
-        $this->modeloCategoria->actualizar($id, $nombre, $prefijo, $color, $ventanillaId > 0 ? $ventanillaId : null);
+        $this->modeloCategoria->actualizar($id, $nombre, $prefijo, $color, $ventanillaId > 0 ? $ventanillaId : null, $horaInicio, $horaFin, $diasSemana);
 
         return ['', 'Categoría actualizada correctamente.'];
     }

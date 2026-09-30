@@ -42,6 +42,27 @@ require __DIR__ . '/../parciales/encabezado.php';
                     </div>
                     <p class="texto-atenuado">Gestiona los puntos de atención donde se llaman los turnos.</p>
                 </a>
+                <a href="index.php?ruta=configuracion-voz" class="tarjeta-modulo">
+                    <div class="tarjeta-modulo-cabecera">
+                        <h2>Voz de anuncios</h2>
+                        <?= $flechaModulo ?>
+                    </div>
+                    <p class="texto-atenuado">Elige la voz, velocidad y tono con que la pantalla anuncia cada turno.</p>
+                </a>
+                <a href="index.php?ruta=configuracion-impresion" class="tarjeta-modulo">
+                    <div class="tarjeta-modulo-cabecera">
+                        <h2>Impresión de recibos</h2>
+                        <?= $flechaModulo ?>
+                    </div>
+                    <p class="texto-atenuado">Configura el tamaño del papel de la impresora de calor para el recibo del turno.</p>
+                </a>
+                <a href="index.php?ruta=reporte-atencion" class="tarjeta-modulo">
+                    <div class="tarjeta-modulo-cabecera">
+                        <h2>Reporte de atención</h2>
+                        <?= $flechaModulo ?>
+                    </div>
+                    <p class="texto-atenuado">Consulta cuántos turnos se atendieron por día, categoría y ventanilla.</p>
+                </a>
             </div>
         </section>
     </div>

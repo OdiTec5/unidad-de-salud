@@ -36,6 +36,7 @@
                         <th>Prefijo</th>
                         <th>Subcategorías</th>
                         <th>Ventanilla</th>
+                        <th>Horario</th>
                         <th>Creado</th>
                         <th></th>
                     </tr>
@@ -43,12 +44,14 @@
                 <tbody>
                     <?php foreach ($categorias as $categoria): ?>
                     <?php $subcategoriasCategoria = $subcategoriasPorCategoria[(int) $categoria['id']] ?? []; ?>
+                    <?php $horarioDescrito = CategoriaTurnero::describirHorario($categoria); ?>
                     <tr>
                         <td><span class="muestra-color" style="background: <?= htmlspecialchars($categoria['color']) ?>;"></span></td>
                         <td><?= htmlspecialchars($categoria['nombre']) ?></td>
                         <td><span class="etiqueta-prefijo"><?= htmlspecialchars($categoria['prefijo']) ?></span></td>
                         <td><?= count($subcategoriasCategoria) ?></td>
                         <td><?= $categoria['ventanilla_nombre'] !== null ? htmlspecialchars($categoria['ventanilla_nombre']) : '<span class="texto-atenuado">Sin asignar</span>' ?></td>
+                        <td><?= $horarioDescrito !== null ? htmlspecialchars($horarioDescrito) : '<span class="texto-atenuado">Sin restricción</span>' ?></td>
                         <td><?= htmlspecialchars($categoria['creado_en']) ?></td>
                         <td class="celda-acciones">
                             <div class="acciones-fila">
@@ -66,6 +69,9 @@
                                     data-prefijo="<?= htmlspecialchars($categoria['prefijo']) ?>"
                                     data-color="<?= htmlspecialchars($categoria['color']) ?>"
                                     data-ventanilla-id="<?= (int) ($categoria['ventanilla_id'] ?? 0) ?>"
+                                    data-hora-inicio="<?= htmlspecialchars($categoria['hora_inicio'] !== null ? substr($categoria['hora_inicio'], 0, 5) : '') ?>"
+                                    data-hora-fin="<?= htmlspecialchars($categoria['hora_fin'] !== null ? substr($categoria['hora_fin'], 0, 5) : '') ?>"
+                                    data-dias-semana="<?= htmlspecialchars($categoria['dias_semana'] ?? '') ?>"
                                 >Editar</button>
                                 <form method="POST" action="index.php?ruta=categorias-turnero" class="form-eliminar-categoria-turnero">
                                     <input type="hidden" name="accion" value="eliminar">
@@ -78,7 +84,7 @@
                     <?php endforeach; ?>
                     <?php if (empty($categorias)): ?>
                     <tr>
-                        <td colspan="7">No hay categorías registradas.</td>
+                        <td colspan="8">No hay categorías registradas.</td>
                     </tr>
                     <?php endif; ?>
                 </tbody>
@@ -87,13 +93,13 @@
     </div>
 
     <div id="modal-editar-categoria-turnero" class="modal-fondo">
-        <div class="modal-caja">
+        <div class="modal-caja modal-caja-media">
             <div class="modal-cabecera">
                 <h2>Editar categoría</h2>
                 <button type="button" id="boton-cerrar-modal-editar-categoria-turnero" class="modal-cerrar" aria-label="Cerrar">&times;</button>
             </div>
 
-            <form method="POST" action="index.php?ruta=categorias-turnero">
+            <form method="POST" action="index.php?ruta=categorias-turnero" class="form-2col">
                 <input type="hidden" name="accion" value="actualizar">
                 <input type="hidden" name="id" id="editar-categoria-turnero-id" value="">
 
@@ -120,6 +126,31 @@
                         <option value="<?= (int) $ventanilla['id'] ?>"><?= htmlspecialchars($ventanilla['nombre']) ?></option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+
+                <div class="campo">
+                    <label for="editar-categoria-turnero-hora-inicio">Horario desde</label>
+                    <input type="time" id="editar-categoria-turnero-hora-inicio" name="hora_inicio">
+                </div>
+
+                <div class="campo">
+                    <label for="editar-categoria-turnero-hora-fin">Horario hasta</label>
+                    <input type="time" id="editar-categoria-turnero-hora-fin" name="hora_fin">
+                </div>
+
+                <div class="campo campo-ancho">
+                    <label>Días de atención</label>
+                    <div class="grupo-checkbox-dias">
+                        <?php foreach (CategoriaTurnero::DIAS_SEMANA as $numeroDia => $etiquetaDia): ?>
+                        <label class="campo-checkbox">
+                            <input type="checkbox" name="dias[]" value="<?= $numeroDia ?>" class="editar-categoria-turnero-dia">
+                            <?= htmlspecialchars($etiquetaDia) ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="texto-atenuado" style="margin: 0.4rem 0 0; font-size: 0.8rem;">
+                        Si no marcas ninguna hora ni día, la categoría queda disponible siempre.
+                    </p>
                 </div>
 
                 <button type="submit" class="boton-enviar">Guardar cambios</button>

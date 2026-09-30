@@ -106,7 +106,7 @@ class Turno
         [$condicion, $parametros] = $this->condicionAlcance($categoriaIds, $subcategoriaIds);
 
         $consulta = $this->db->prepare(
-            "SELECT t.id, t.numero_turno, t.creado_en, c.nombre AS categoria_nombre, c.color AS categoria_color,
+            "SELECT t.id, t.categoria_id, t.numero_turno, t.creado_en, c.nombre AS categoria_nombre, c.color AS categoria_color,
                     s.nombre AS subcategoria_nombre, v.nombre AS ventanilla_nombre,
                     CONCAT_WS(' ', b.primer_nombre, b.segundo_nombre, b.primer_apellido, b.segundo_apellido) AS beneficiario_nombre
              FROM turnos t
@@ -170,6 +170,59 @@ class Turno
     }
 
     /**
+     * Pasa el turno (todavía en espera) a otra categoría, para que lo atienda el compañero que
+     * maneja esa categoría en vez de quien lo tenía. El número de turno se regenera con el
+     * prefijo y el siguiente consecutivo de la categoría destino, porque el original ya no
+     * corresponde; la fecha de creación se conserva para no perder su puesto en la fila por
+     * tiempo de espera.
+     */
+    public function transferir(int $turnoId, int $categoriaDestinoId): ?array
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $bloqueo = $this->db->prepare('SELECT prefijo FROM categorias_turnero WHERE id = :id FOR UPDATE');
+            $bloqueo->execute(['id' => $categoriaDestinoId]);
+            $categoria = $bloqueo->fetch();
+
+            if ($categoria === false) {
+                $this->db->rollBack();
+                return null;
+            }
+
+            $consulta = $this->db->prepare(
+                "SELECT COALESCE(MAX(consecutivo), 0) + 1 AS siguiente
+                 FROM turnos
+                 WHERE categoria_id = :categoria_id AND DATE(creado_en) = CURDATE()"
+            );
+            $consulta->execute(['categoria_id' => $categoriaDestinoId]);
+            $consecutivo = (int) $consulta->fetch()['siguiente'];
+
+            $numeroTurno = $categoria['prefijo'] . '-' . str_pad((string) $consecutivo, 3, '0', STR_PAD_LEFT);
+
+            $actualizar = $this->db->prepare(
+                "UPDATE turnos
+                 SET categoria_id = :categoria_id, subcategoria_id = NULL, numero_turno = :numero_turno, consecutivo = :consecutivo
+                 WHERE id = :id AND estado = 'espera'"
+            );
+            $actualizar->execute([
+                'categoria_id' => $categoriaDestinoId,
+                'numero_turno' => $numeroTurno,
+                'consecutivo' => $consecutivo,
+                'id' => $turnoId,
+            ]);
+
+            $transferido = $actualizar->rowCount() > 0;
+            $this->db->commit();
+
+            return $transferido ? ['numero_turno' => $numeroTurno] : null;
+        } catch (Throwable $excepcion) {
+            $this->db->rollBack();
+            throw $excepcion;
+        }
+    }
+
+    /**
      * Deshace la última llamada: vuelve a poner en espera el turno atendido más recientemente.
      * Es una acción global, reservada a administradores.
      */
@@ -193,6 +246,38 @@ class Turno
         $actualizar->execute(['id' => $fila['id']]);
 
         return $fila;
+    }
+
+    /**
+     * El último turno atendido en cada ventanilla que tenga categorías asignadas y haya llamado
+     * al menos un turno hoy. Pensada para la pantalla pública: como varios operadores avanzan su
+     * propia cola en paralelo, no hay un solo "turno actual" global, sino uno por ventanilla.
+     */
+    public function obtenerAtencionesActuales(): array
+    {
+        $consulta = $this->db->query(
+            "SELECT v.id AS ventanilla_id, v.nombre AS ventanilla_nombre,
+                    t.id, t.numero_turno, t.atendido_en,
+                    c.nombre AS categoria_nombre, c.color AS categoria_color,
+                    s.nombre AS subcategoria_nombre,
+                    CONCAT_WS(' ', b.primer_nombre, b.segundo_nombre, b.primer_apellido, b.segundo_apellido) AS beneficiario_nombre
+             FROM ventanillas v
+             JOIN categorias_turnero c ON c.ventanilla_id = v.id
+             JOIN turnos t ON t.categoria_id = c.id
+             JOIN beneficiarios b ON b.id = t.beneficiario_id
+             LEFT JOIN subcategorias_turnero s ON s.id = t.subcategoria_id
+             WHERE t.estado = 'atendido' AND DATE(t.creado_en) = CURDATE()
+               AND t.atendido_en = (
+                   SELECT MAX(t2.atendido_en)
+                   FROM turnos t2
+                   JOIN categorias_turnero c2 ON c2.id = t2.categoria_id
+                   WHERE c2.ventanilla_id = v.id AND t2.estado = 'atendido' AND DATE(t2.creado_en) = CURDATE()
+               )
+             GROUP BY v.id
+             ORDER BY v.nombre"
+        );
+
+        return $consulta->fetchAll();
     }
 
     public function obtenerResumenPorCategoria(?array $categoriaIds = null): array

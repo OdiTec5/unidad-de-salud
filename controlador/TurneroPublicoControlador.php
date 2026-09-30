@@ -4,6 +4,8 @@ require_once __DIR__ . '/../modelo/Beneficiario.php';
 require_once __DIR__ . '/../modelo/CategoriaTurnero.php';
 require_once __DIR__ . '/../modelo/SubcategoriaTurnero.php';
 require_once __DIR__ . '/../modelo/Turno.php';
+require_once __DIR__ . '/../modelo/ConfiguracionVoz.php';
+require_once __DIR__ . '/../modelo/ConfiguracionImpresion.php';
 
 class TurneroPublicoControlador
 {
@@ -11,6 +13,8 @@ class TurneroPublicoControlador
     private CategoriaTurnero $modeloCategoria;
     private SubcategoriaTurnero $modeloSubcategoria;
     private Turno $modeloTurno;
+    private ConfiguracionVoz $modeloConfiguracionVoz;
+    private ConfiguracionImpresion $modeloConfiguracionImpresion;
 
     public function __construct()
     {
@@ -18,10 +22,14 @@ class TurneroPublicoControlador
         $this->modeloCategoria = new CategoriaTurnero();
         $this->modeloSubcategoria = new SubcategoriaTurnero();
         $this->modeloTurno = new Turno();
+        $this->modeloConfiguracionVoz = new ConfiguracionVoz();
+        $this->modeloConfiguracionImpresion = new ConfiguracionImpresion();
     }
 
     public function solicitar(): void
     {
+        $configuracionImpresion = $this->modeloConfiguracionImpresion->obtener();
+        $momento = $this->modeloCategoria->obtenerMomentoActual();
         $paso = 'documento';
         $error = '';
         $beneficiario = null;
@@ -66,6 +74,10 @@ class TurneroPublicoControlador
                     $error = 'Selecciona una categoría válida.';
                     $paso = 'categoria';
                     $categorias = $this->modeloCategoria->obtenerTodos();
+                } elseif (!CategoriaTurnero::estaEnHorario($categoria, $momento['hora'], $momento['diaIso'])) {
+                    $error = $this->mensajeCerrado($categoria);
+                    $paso = 'categoria';
+                    $categorias = $this->modeloCategoria->obtenerTodos();
                 } else {
                     $subcategorias = $this->modeloSubcategoria->obtenerPorCategoria($categoriaId);
 
@@ -97,6 +109,10 @@ class TurneroPublicoControlador
                     $error = 'Selecciona una categoría válida.';
                     $paso = 'categoria';
                     $categorias = $this->modeloCategoria->obtenerTodos();
+                } elseif (!CategoriaTurnero::estaEnHorario($categoria, $momento['hora'], $momento['diaIso'])) {
+                    $error = $this->mensajeCerrado($categoria);
+                    $paso = 'categoria';
+                    $categorias = $this->modeloCategoria->obtenerTodos();
                 } elseif ($subcategoria === null || (int) $subcategoria['categoria_id'] !== $categoriaId) {
                     $error = 'Selecciona una subcategoría válida.';
                     $paso = 'subcategoria';
@@ -115,8 +131,17 @@ class TurneroPublicoControlador
         require __DIR__ . '/../vista/turnero-publico/solicitar.php';
     }
 
+    private function mensajeCerrado(array $categoria): string
+    {
+        $horario = CategoriaTurnero::describirHorario($categoria);
+
+        return 'Esta categoría está cerrada en este momento.' . ($horario !== null ? ' Horario: ' . $horario . '.' : '');
+    }
+
     public function pantalla(): void
     {
+        $configuracionVoz = $this->modeloConfiguracionVoz->obtener();
+
         require __DIR__ . '/../vista/turnero-publico/pantalla.php';
     }
 
@@ -124,11 +149,11 @@ class TurneroPublicoControlador
     {
         header('Content-Type: application/json; charset=utf-8');
 
-        $actual = $this->modeloTurno->obtenerActual();
-        $proximos = $this->modeloTurno->obtenerProximos($actual['id'] ?? null, 4);
+        $atenciones = $this->modeloTurno->obtenerAtencionesActuales();
+        $proximos = $this->modeloTurno->obtenerProximos(null, 8);
 
         echo json_encode([
-            'actual' => $actual,
+            'atenciones' => $atenciones,
             'proximos' => $proximos,
         ]);
     }

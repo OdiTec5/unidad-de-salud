@@ -11,6 +11,9 @@ require_once __DIR__ . '/controlador/BeneficiarioControlador.php';
 require_once __DIR__ . '/controlador/TurneroPublicoControlador.php';
 require_once __DIR__ . '/controlador/GestionTurnosControlador.php';
 require_once __DIR__ . '/controlador/VentanillaControlador.php';
+require_once __DIR__ . '/controlador/ConfiguracionVozControlador.php';
+require_once __DIR__ . '/controlador/ConfiguracionImpresionControlador.php';
+require_once __DIR__ . '/controlador/ReporteAtencionControlador.php';
 
 $ruta = $_GET['ruta'] ?? 'login';
 
@@ -37,6 +40,18 @@ switch ($ruta) {
 
     case 'ventanillas':
         (new VentanillaControlador())->index();
+        break;
+
+    case 'configuracion-voz':
+        (new ConfiguracionVozControlador())->index();
+        break;
+
+    case 'configuracion-impresion':
+        (new ConfiguracionImpresionControlador())->index();
+        break;
+
+    case 'reporte-atencion':
+        (new ReporteAtencionControlador())->index();
         break;
 
     case 'turnos':

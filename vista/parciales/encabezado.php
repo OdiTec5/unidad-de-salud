@@ -17,6 +17,7 @@ $versionJs = @filemtime(__DIR__ . '/../../assets/js/app.js') ?: time();
 <body>
     <div class="layout">
         <?php require __DIR__ . '/sidebar.php'; ?>
+        <div class="barra-lateral-fondo" id="barra-lateral-fondo"></div>
 
         <div class="contenido-principal">
             <header class="encabezado">

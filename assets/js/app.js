@@ -13,19 +13,46 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener('DOMContentLoaded', function () {
     var botonHamburguesa = document.getElementById('boton-hamburguesa');
     var barraLateral = document.querySelector('.barra-lateral');
+    var fondo = document.getElementById('barra-lateral-fondo');
 
     if (!botonHamburguesa || !barraLateral) {
         return;
     }
 
-    if (localStorage.getItem('sidebarColapsado') === '1') {
+    var esMovil = window.matchMedia('(max-width: 780px)').matches;
+    var preferenciaGuardada = localStorage.getItem('sidebarColapsado');
+
+    // En móvil, si el usuario nunca lo tocó antes, arranca cerrado (es una gaveta que tapa todo
+    // el contenido); en escritorio arranca abierto, como parte fija del layout.
+    var colapsadoInicial = preferenciaGuardada !== null ? preferenciaGuardada === '1' : esMovil;
+
+    if (colapsadoInicial) {
         barraLateral.classList.add('colapsada');
     }
 
-    botonHamburguesa.addEventListener('click', function () {
+    function actualizarFondo() {
+        if (!fondo) {
+            return;
+        }
+        fondo.classList.toggle('visible', !barraLateral.classList.contains('colapsada'));
+    }
+
+    function alternar() {
         barraLateral.classList.toggle('colapsada');
         localStorage.setItem('sidebarColapsado', barraLateral.classList.contains('colapsada') ? '1' : '0');
-    });
+        actualizarFondo();
+    }
+
+    actualizarFondo();
+    botonHamburguesa.addEventListener('click', alternar);
+
+    if (fondo) {
+        fondo.addEventListener('click', function () {
+            if (!barraLateral.classList.contains('colapsada')) {
+                alternar();
+            }
+        });
+    }
 });
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -370,6 +397,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var campoPrefijo = document.getElementById('editar-categoria-turnero-prefijo');
     var campoColor = document.getElementById('editar-categoria-turnero-color');
     var campoVentanilla = document.getElementById('editar-categoria-turnero-ventanilla');
+    var campoHoraInicio = document.getElementById('editar-categoria-turnero-hora-inicio');
+    var campoHoraFin = document.getElementById('editar-categoria-turnero-hora-fin');
+    var casillasDias = document.querySelectorAll('.editar-categoria-turnero-dia');
 
     function cerrar() {
         modalEditar.classList.remove('abierto');
@@ -384,6 +414,16 @@ document.addEventListener('DOMContentLoaded', function () {
             if (campoVentanilla) {
                 campoVentanilla.value = boton.dataset.ventanillaId && boton.dataset.ventanillaId !== '0' ? boton.dataset.ventanillaId : '';
             }
+            if (campoHoraInicio) {
+                campoHoraInicio.value = boton.dataset.horaInicio || '';
+            }
+            if (campoHoraFin) {
+                campoHoraFin.value = boton.dataset.horaFin || '';
+            }
+            var diasSeleccionados = (boton.dataset.diasSemana || '').split(',').filter(Boolean);
+            casillasDias.forEach(function (casilla) {
+                casilla.checked = diasSeleccionados.indexOf(casilla.value) !== -1;
+            });
             modalEditar.classList.add('abierto');
         });
     });
@@ -662,3 +702,4 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
